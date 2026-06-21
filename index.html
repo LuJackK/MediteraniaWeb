@@ -3,7 +3,6 @@
   <head>
     <meta charset="utf-8">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-    <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, viewport-fit=cover">
     <title>Unity Web Player | MediTerrania</title>
     <link rel="shortcut icon" href="TemplateData/favicon.ico">
     <link rel="stylesheet" href="TemplateData/style.css">
@@ -90,6 +89,11 @@
 
       if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
         // Mobile device style: fill the whole browser client area with the game canvas:
+
+        var meta = document.createElement('meta');
+        meta.name = 'viewport';
+        meta.content = 'width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes';
+        document.getElementsByTagName('head')[0].appendChild(meta);
         document.querySelector("#unity-container").className = "unity-mobile";
         canvas.className = "unity-mobile";
 
@@ -99,8 +103,9 @@
 
 
       } else {
-        // Desktop style: keep the canvas filling the whole browser viewport.
-        document.querySelector("#unity-container").className = "unity-desktop";
+        // Desktop style: Render the game canvas in a window that can be maximized to fullscreen:
+        canvas.style.width = "960px";
+        canvas.style.height = "600px";
       }
 
       document.querySelector("#unity-loading-bar").style.display = "block";
@@ -112,53 +117,8 @@
           document.querySelector("#unity-progress-bar-full").style.width = 100 * progress + "%";
               }).then((unityInstance) => {
                 document.querySelector("#unity-loading-bar").style.display = "none";
-                const fullscreenButton = document.querySelector("#unity-fullscreen-button");
-                let fullscreenRequested = false;
-                const fullscreenChangeEvents = [
-                  "fullscreenchange",
-                  "webkitfullscreenchange",
-                  "mozfullscreenchange",
-                  "MSFullscreenChange",
-                ];
-
-                function isDocumentFullscreen() {
-                  return !!(
-                    document.fullscreenElement ||
-                    document.webkitFullscreenElement ||
-                    document.mozFullScreenElement ||
-                    document.msFullscreenElement
-                  );
-                }
-
-                function syncFullscreenState() {
-                  fullscreenRequested = isDocumentFullscreen();
-                }
-
-                function handleFullscreenFailure(error) {
-                  console.warn("Fullscreen request failed.", error);
-                  fullscreenRequested = false;
-                }
-
-                fullscreenChangeEvents.forEach((eventName) => {
-                  document.addEventListener(eventName, syncFullscreenState);
-                });
-
-                function requestUnityFullscreen() {
-                  if (fullscreenRequested) return;
-                  fullscreenRequested = true;
-
-                  try {
-                    const fullscreenRequest = unityInstance.SetFullscreen(1);
-                    if (fullscreenRequest && typeof fullscreenRequest.catch === "function") {
-                      fullscreenRequest.catch(handleFullscreenFailure);
-                    }
-                  } catch (error) {
-                    handleFullscreenFailure(error);
-                  }
-                }
-
-                fullscreenButton.onclick = () => {
-                  requestUnityFullscreen();
+                document.querySelector("#unity-fullscreen-button").onclick = () => {
+                  unityInstance.SetFullscreen(1);
                 };
 
               }).catch((message) => {
