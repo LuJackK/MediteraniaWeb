@@ -3,6 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, viewport-fit=cover">
     <title>Unity Web Player | MediTerrania</title>
     <link rel="shortcut icon" href="TemplateData/favicon.ico">
     <link rel="stylesheet" href="TemplateData/style.css">
@@ -55,9 +56,9 @@
       var loaderUrl = buildUrl + "/builds.loader.js";
       var config = {
         arguments: [],
-        dataUrl: buildUrl + "/builds.data.br",
-        frameworkUrl: buildUrl + "/builds.framework.js.br",
-        codeUrl: buildUrl + "/builds.wasm.br",
+        dataUrl: buildUrl + "/builds.data",
+        frameworkUrl: buildUrl + "/builds.framework.js",
+        codeUrl: buildUrl + "/builds.wasm",
         streamingAssetsUrl: "StreamingAssets",
         companyName: "DefaultCompany",
         productName: "MediTerrania",
@@ -89,11 +90,6 @@
 
       if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
         // Mobile device style: fill the whole browser client area with the game canvas:
-
-        var meta = document.createElement('meta');
-        meta.name = 'viewport';
-        meta.content = 'width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes';
-        document.getElementsByTagName('head')[0].appendChild(meta);
         document.querySelector("#unity-container").className = "unity-mobile";
         canvas.className = "unity-mobile";
 
@@ -103,9 +99,8 @@
 
 
       } else {
-        // Desktop style: Render the game canvas in a window that can be maximized to fullscreen:
-        canvas.style.width = "960px";
-        canvas.style.height = "600px";
+        // Desktop style: keep the canvas filling the whole browser viewport.
+        document.querySelector("#unity-container").className = "unity-desktop";
       }
 
       document.querySelector("#unity-loading-bar").style.display = "block";
@@ -117,9 +112,38 @@
           document.querySelector("#unity-progress-bar-full").style.width = 100 * progress + "%";
               }).then((unityInstance) => {
                 document.querySelector("#unity-loading-bar").style.display = "none";
-                document.querySelector("#unity-fullscreen-button").onclick = () => {
-                  unityInstance.SetFullscreen(1);
+                const fullscreenButton = document.querySelector("#unity-fullscreen-button");
+                let fullscreenRequested = false;
+
+                function requestUnityFullscreen() {
+                  if (fullscreenRequested) return;
+                  fullscreenRequested = true;
+
+                  try {
+                    unityInstance.SetFullscreen(1);
+                  } catch (error) {
+                    console.warn("Fullscreen request failed.", error);
+                    fullscreenRequested = false;
+                  }
+                }
+
+                function requestFullscreenOnFirstInteraction() {
+                  requestUnityFullscreen();
+                  window.removeEventListener("pointerdown", requestFullscreenOnFirstInteraction);
+                  window.removeEventListener("touchend", requestFullscreenOnFirstInteraction);
+                  window.removeEventListener("keydown", requestFullscreenOnFirstInteraction);
+                }
+
+                fullscreenButton.onclick = () => {
+                  requestUnityFullscreen();
                 };
+
+                // Browsers may block fullscreen on load, so try once immediately
+                // and retry on the first user interaction when needed.
+                requestUnityFullscreen();
+                window.addEventListener("pointerdown", requestFullscreenOnFirstInteraction, { once: true });
+                window.addEventListener("touchend", requestFullscreenOnFirstInteraction, { once: true });
+                window.addEventListener("keydown", requestFullscreenOnFirstInteraction, { once: true });
 
               }).catch((message) => {
                 alert(message);
