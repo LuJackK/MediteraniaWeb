@@ -114,36 +114,52 @@
                 document.querySelector("#unity-loading-bar").style.display = "none";
                 const fullscreenButton = document.querySelector("#unity-fullscreen-button");
                 let fullscreenRequested = false;
+                const fullscreenChangeEvents = [
+                  "fullscreenchange",
+                  "webkitfullscreenchange",
+                  "mozfullscreenchange",
+                  "MSFullscreenChange",
+                ];
+
+                function isDocumentFullscreen() {
+                  return !!(
+                    document.fullscreenElement ||
+                    document.webkitFullscreenElement ||
+                    document.mozFullScreenElement ||
+                    document.msFullscreenElement
+                  );
+                }
+
+                function syncFullscreenState() {
+                  fullscreenRequested = isDocumentFullscreen();
+                }
+
+                function handleFullscreenFailure(error) {
+                  console.warn("Fullscreen request failed.", error);
+                  fullscreenRequested = false;
+                }
+
+                fullscreenChangeEvents.forEach((eventName) => {
+                  document.addEventListener(eventName, syncFullscreenState);
+                });
 
                 function requestUnityFullscreen() {
                   if (fullscreenRequested) return;
                   fullscreenRequested = true;
 
                   try {
-                    unityInstance.SetFullscreen(1);
+                    const fullscreenRequest = unityInstance.SetFullscreen(1);
+                    if (fullscreenRequest && typeof fullscreenRequest.catch === "function") {
+                      fullscreenRequest.catch(handleFullscreenFailure);
+                    }
                   } catch (error) {
-                    console.warn("Fullscreen request failed.", error);
-                    fullscreenRequested = false;
+                    handleFullscreenFailure(error);
                   }
-                }
-
-                function requestFullscreenOnFirstInteraction() {
-                  requestUnityFullscreen();
-                  window.removeEventListener("pointerdown", requestFullscreenOnFirstInteraction);
-                  window.removeEventListener("touchend", requestFullscreenOnFirstInteraction);
-                  window.removeEventListener("keydown", requestFullscreenOnFirstInteraction);
                 }
 
                 fullscreenButton.onclick = () => {
                   requestUnityFullscreen();
                 };
-
-                // Browsers may block fullscreen on load, so try once immediately
-                // and retry on the first user interaction when needed.
-                requestUnityFullscreen();
-                window.addEventListener("pointerdown", requestFullscreenOnFirstInteraction, { once: true });
-                window.addEventListener("touchend", requestFullscreenOnFirstInteraction, { once: true });
-                window.addEventListener("keydown", requestFullscreenOnFirstInteraction, { once: true });
 
               }).catch((message) => {
                 alert(message);
